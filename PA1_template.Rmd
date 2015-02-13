@@ -7,23 +7,25 @@ output:
 
 
 ## Loading and preprocessing the data
-RawData <- read.csv("C:/Documents and Settings/Eu/RResearch/RepData_PeerAssessment1/activity.csv")
+filename <- unzip("activity.zip")
+RawData <- read.csv(filename, stringsAsFactors = FALSE)
+str(RawData)
 
-RawData$date <- as.Date(Rawdata$Date)
+RawData$date <- as.Date(RawData$date)
+str(RawData)
 
 
 ## What is mean total number of steps taken per day?
 
 stepsdate <- aggregate(steps~date, data =RawData,FUN=sum)
-
+stepsdate
 hist(stepsdate$steps)
-mean(dtepsdate$steps)
+mean(stepsdate$steps)
 median(stepsdate$steps)
 
 ## What is the average daily activity pattern?
 
-stepsinterval <- aggregate(steps~interval,data= RawData,
-FUN=mean)
+stepsinterval <- aggregate(steps~interval,data= RawData,FUN=mean)
 plot(stepsinterval, type ="l")
 
 stepsinterval$interval[which.max(stepsinterval$steps)]
@@ -32,11 +34,45 @@ stepsinterval$interval[which.max(stepsinterval$steps)]
 
 ## Imputing missing values
 
-
 sum(is.na(RawData))
 
-RawData$steps <- impute(RawData$steps, fun=mean)
+DatanotNA <- RawData
+for (i in 1:nrow(RawData)) {
+        if(is.na(RawData[i,"steps"])) {
+                interval <- RawData[i,"interval"]
+                index <- which(interval == stepsinterval[,"interval"])
+                DatanotNA[i,"steps"] <- stepsinterval[index , "steps"]
+        }
+}
+head(DatanotNA)
+
+stepsdatenotNA <- aggregate(steps~date, data =DatanotNA,FUN=sum)
+stepsdatenotNA
+hist(stepsdatenotNA$steps)
+mean(stepsdatenotNA$steps)
+median(stepsdatenotNA$steps)
+
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
 
+DatanotNA$day_type <- weekdays(DatanotNA$date)
+weekdays <- c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday")
+for(i in 1:nrow(DatanotNA)) {
+        if(any(DatanotNA[i, "day_type"] == weekdays)) {
+                DatanotNA[i, "day_type"] <- "Weekday"
+        }
+        else {
+                DatanotNA[i, "day_type"] <- "Weekend"                
+        }
+}
+DatanotNA$day_type <- factor(DatanotNA$day_type,levels = c("Weekday", "Weekend")) 
+head(DatanotNA)
+
+stepsweekdays <- aggregate(steps ~ interval + day_type, DatanotNA, mean)
+head(stepsweekdays)
+
+library(lattice)
+xyplot(steps ~ interval | day_type, stepsweekdays, layout = c(1, 2),
+       col = "blue", xlab = "Interval", ylab = "Average number of steps", 
+       type = "l", lwd = 2)
